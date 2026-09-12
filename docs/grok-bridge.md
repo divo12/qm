@@ -3,9 +3,7 @@
 System design for pairing a named QM agent to a consenting user's Grok Bot so
 team rooms can use that person's computer without making Grok Bot multiplayer.
 
-Status: implementing. Feature flag `grok_bridge`, default off. See
-[adrs/qm-grok-bridge.md](../adrs/qm-grok-bridge.md). A Remotion walkthrough of
-the Monday `#pipeline-review` path lives in [films/grok-bridge](../films/grok-bridge).
+Status: implementing. Feature flag `grok_bridge`, default off.
 
 ## 1. Requirements
 
