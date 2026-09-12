@@ -1,7 +1,35 @@
 import { GROK_BRIDGE_PROTOCOL } from "./crypto.ts";
-import { GrokBridgeError, JOB_EVENT_STATUSES, type EventEnvelope, type JobEventStatus } from "./types.ts";
+import {
+  GrokBridgeError,
+  JOB_EVENT_STATUSES,
+  type EventEnvelope,
+  type GrokJob,
+  type GrokPairing,
+  type JobEnvelope,
+  type JobEventStatus,
+} from "./types.ts";
 
 const isObj = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
+
+export function buildJobEnvelope(input: {
+  job: GrokJob;
+  pairing: GrokPairing;
+  token: string;
+  callbackBaseUrl: string;
+}): JobEnvelope {
+  return {
+    protocol: GROK_BRIDGE_PROTOCOL,
+    job_id: input.job.id,
+    qm_agent: input.pairing.agentName,
+    qm_session_id: input.job.originSessionId,
+    instruction: input.job.instruction,
+    callback_url: `${input.callbackBaseUrl.replace(/\/$/, "")}/v1/grok-bridge/jobs/${input.job.id}/events`,
+    callback_token: input.token,
+    reply_required: true,
+    expires_at: new Date(input.job.expiresAt).toISOString(),
+    approval_policy: "owner-must-approve-side-effects",
+  };
+}
 
 export function parseEventEnvelope(raw: unknown, expectedJobId: string): EventEnvelope {
   if (!isObj(raw)) throw new GrokBridgeError("bad_request", 400, "event body must be a JSON object");

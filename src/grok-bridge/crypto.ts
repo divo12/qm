@@ -6,6 +6,10 @@ export const GROK_BRIDGE_QUEUE_CAP = 5;
 export const GROK_BRIDGE_DEFAULT_TTL_MS = 30 * 60_000;
 export const GROK_BRIDGE_MAX_TTL_MS = 2 * 60 * 60_000;
 
+export function inboundRefFor(pairingId: string): string {
+  return `grok-bridge:${pairingId}`;
+}
+
 export function mintCallbackToken(): string {
   return randomBytes(32).toString("base64url");
 }

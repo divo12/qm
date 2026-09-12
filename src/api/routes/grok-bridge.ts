@@ -1,9 +1,12 @@
-import { grokBridgeReplySkill } from "../../grok-bridge/reply-skill.ts";
+import { createManualProvisioner } from "../../grok-bridge/provisioner.ts";
 import { GrokBridgeError } from "../../grok-bridge/types.ts";
+import { personalScope } from "../../types.ts";
 import { errMessage } from "../../util/errors.ts";
 import { PayloadTooLargeError, readRawBody, sendJson } from "../http.ts";
 import { isObj, orgScope } from "./shared.ts";
 import type { ApiCtx, BaseCtx, Route } from "./route.ts";
+
+const provisioner = createManualProvisioner();
 
 function actorIdOf(ctx: ApiCtx, body: Record<string, unknown>): string | undefined {
   if (ctx.capability?.actorId) return ctx.capability.actorId;
@@ -54,11 +57,11 @@ async function createPairing(ctx: ApiCtx): Promise<void> {
       ownerPrincipalId: body.ownerPrincipalId,
       actorId,
       actorType: actorTypeOf(body),
-      originScopeId: typeof body.originScopeId === "string" ? body.originScopeId : `personal:${body.ownerPrincipalId}`,
+      originScopeId: typeof body.originScopeId === "string" ? body.originScopeId : personalScope(body.ownerPrincipalId),
     });
     sendJson(ctx.res, 200, {
       pairing,
-      skill: grokBridgeReplySkill({ agentName: pairing.agentName, displayName: pairing.grokDisplayName }),
+      skill: provisioner.skillFor(pairing),
     });
   } catch (error) {
     sendBridgeError(ctx, error);

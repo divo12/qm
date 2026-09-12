@@ -4,6 +4,7 @@ import {
   entryDeliveryKey,
   type SessionStore,
 } from "../sessions/session-store.ts";
+import { swallow } from "../util/errors.ts";
 import type { ProjectorPort } from "./types.ts";
 
 const PROJECT_LEASE_MS = 2_000;
@@ -48,8 +49,8 @@ export function createSessionProjector(
         } finally {
           await sessions.releaseLease(lease);
         }
-      } catch {
-        // Job state is already durable; a missed transcript line must not 500 the Bot callback.
+      } catch (error) {
+        swallow("grok-bridge: session projection", error);
       }
     },
   };

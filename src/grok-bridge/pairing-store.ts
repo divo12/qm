@@ -1,14 +1,8 @@
 import { createMemoryMap, type DurableMap } from "../persistence/durable-map.ts";
 import { hashId } from "../util/crypto.ts";
-import type { GrokPairing } from "./types.ts";
+import type { GrokPairing, PairingStore } from "./types.ts";
 
-export interface PairingStore {
-  create(pairing: GrokPairing): Promise<GrokPairing>;
-  get(id: string): Promise<GrokPairing | null>;
-  list(): Promise<GrokPairing[]>;
-  save(pairing: GrokPairing): Promise<GrokPairing>;
-  findActive(ownerPrincipalId: string, agentName: string): Promise<GrokPairing | null>;
-}
+export type { PairingStore } from "./types.ts";
 
 export function createPairingStore(backing: DurableMap<GrokPairing> = createMemoryMap<GrokPairing>()): PairingStore {
   return {

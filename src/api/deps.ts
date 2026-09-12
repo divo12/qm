@@ -41,7 +41,7 @@ import type { WebhookReceiver } from "../webhooks/webhook-receiver.ts";
 import type { IdentityService } from "../identity/identity-service.ts";
 import type { DeviceFlowCutoverStore } from "../credentials/device-flow-cutover.ts";
 import type { FeatureFlagStore } from "../feature-flags.ts";
-import type { GrokBridge } from "../grok-bridge/service.ts";
+import type { GrokBridge } from "../grok-bridge/types.ts";
 import type {
   ConnectorTokenStore,
   Keychain,

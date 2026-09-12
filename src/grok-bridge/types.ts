@@ -126,6 +126,21 @@ export interface EventEnvelope {
   artifacts: unknown[];
 }
 
+export interface PairingStore {
+  create(pairing: GrokPairing): Promise<GrokPairing>;
+  get(id: string): Promise<GrokPairing | null>;
+  list(): Promise<GrokPairing[]>;
+  save(pairing: GrokPairing): Promise<GrokPairing>;
+  findActive(ownerPrincipalId: string, agentName: string): Promise<GrokPairing | null>;
+}
+
+export interface JobStore {
+  create(job: GrokJob): Promise<GrokJob>;
+  get(id: string): Promise<GrokJob | null>;
+  save(job: GrokJob): Promise<GrokJob>;
+  listByPairing(pairingId: string): Promise<GrokJob[]>;
+}
+
 export interface SessionAccess {
   canRead(sessionId: string, actorId: string): Promise<boolean>;
   ownerIsMember(sessionId: string, ownerId: string): Promise<boolean>;
@@ -143,6 +158,50 @@ export interface SecretVault {
 
 export interface ProjectorPort {
   project(job: GrokJob, pairing: GrokPairing, event: PendingGrokEvent): Promise<void>;
+}
+
+export interface ProvisionerPort {
+  skillFor(pairing: Pick<PairingView, "agentName" | "grokDisplayName">): string;
+}
+
+export interface RequestPairing {
+  agentName: string;
+  ownerPrincipalId: string;
+  actorId: string;
+  actorType: "internal" | "guest";
+  originScopeId: ScopeId;
+}
+
+export interface DispatchJob {
+  agentName: string;
+  ownerPrincipalId: string;
+  originSessionId: string;
+  originActorId: string;
+  actorType: "internal" | "guest";
+  instruction: string;
+  callbackBaseUrl: string;
+}
+
+export interface GrokBridge {
+  requestPairing(input: RequestPairing): Promise<PairingView>;
+  decidePairing(id: string, ownerId: string, decision: "accept" | "decline"): Promise<PairingView>;
+  completeInbound(id: string, ownerId: string, inbound: InboundCreds): Promise<PairingView>;
+  revoke(id: string, actorId: string): Promise<void>;
+  dispatch(input: DispatchJob): Promise<JobView>;
+  ingest(jobId: string, raw: unknown, authorizationHeader: string | undefined): Promise<{ duplicate: boolean }>;
+  getJob(jobId: string, viewerId: string): Promise<JobView>;
+}
+
+export interface GrokBridgeDeps {
+  pairings: PairingStore;
+  jobs: JobStore;
+  secrets: SecretVault;
+  sessions: SessionAccess;
+  outbound: OutboundPort;
+  projector: ProjectorPort;
+  now?: () => number;
+  id?: () => string;
+  mintToken?: () => string;
 }
 
 export class GrokBridgeError extends Error {

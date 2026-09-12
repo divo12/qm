@@ -86,6 +86,27 @@ delivery). One adapter today for outbound HTTP. CUA is a second provisioner
 adapter when it exists; until then `ManualProvisioner` is enough for a real
 seam.
 
+`src/grok-bridge/` follows those seams. `service.ts` is a facade over two
+state machines; HTTP in `src/api/routes/grok-bridge.ts` talks only to
+`GrokBridge`.
+
+| Module                                      | Role                                                |
+| ------------------------------------------- | --------------------------------------------------- |
+| `types.ts`                                  | Deep interface, ports, records, views               |
+| `crypto.ts`                                 | Protocol constants, tokens, hashes                  |
+| `pairing.ts`                                | Pairing state machine                               |
+| `jobs.ts`                                   | Job state machine, queue, ingest                    |
+| `protocol.ts`                               | Job and event envelopes                             |
+| `views.ts`                                  | Pairing and job API views                           |
+| `authz.ts`                                  | Owner, guest, agent-name checks                     |
+| `reply-skill.ts`                            | Skill text body                                     |
+| `provisioner.ts`                            | Manual skill text (`ProvisionerPort`)               |
+| `service.ts`                                | Compose pairing + jobs; revoke fails in-flight jobs |
+| `pairing-store.ts`, `job-store.ts`          | Durable-map adapters                                |
+| `durable-vault.ts`, `memory-vault.ts`       | `SecretVault` adapters                              |
+| `http-outbound.ts`                          | `OutboundPort`                                      |
+| `session-access.ts`, `session-projector.ts` | Session audience and projection                     |
+
 Deletion test: if this module vanished, consent, job state, token hashing,
 queueing, and event projection would reappear in webhook routes, Slack
 ask-agent, and the web UI. That is the keep.
