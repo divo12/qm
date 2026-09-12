@@ -3,8 +3,9 @@
 System design for pairing a named QM agent to a consenting user's Grok Bot so
 team rooms can use that person's computer without making Grok Bot multiplayer.
 
-Status: design. Feature flag `grok_bridge`, default off. See
-[adrs/qm-grok-bridge.md](../adrs/qm-grok-bridge.md).
+Status: implementing. Feature flag `grok_bridge`, default off. See
+[adrs/qm-grok-bridge.md](../adrs/qm-grok-bridge.md). A Remotion walkthrough of
+the Monday `#pipeline-review` path lives in [films/grok-bridge](../films/grok-bridge).
 
 ## 1. Requirements
 
@@ -56,13 +57,13 @@ flowchart LR
 
 Actors:
 
-| Actor | Trust | Role |
-| --- | --- | --- |
-| Teammate | QM principal | Asks Sara in a room they can already see |
-| Owner | QM principal + Cursor user | Consents, holds Grok Bot computer, clicks Allow |
-| QM core | Deployment | Pairing, jobs, projection |
-| Grok Bot Sara | Owner's computer | Executes, POSTs events |
-| Provisioner | Optional | Installs skill / webhook; never the result bus |
+| Actor         | Trust                      | Role                                            |
+| ------------- | -------------------------- | ----------------------------------------------- |
+| Teammate      | QM principal               | Asks Sara in a room they can already see        |
+| Owner         | QM principal + Cursor user | Consents, holds Grok Bot computer, clicks Allow |
+| QM core       | Deployment                 | Pairing, jobs, projection                       |
+| Grok Bot Sara | Owner's computer           | Executes, POSTs events                          |
+| Provisioner   | Optional                   | Installs skill / webhook; never the result bus  |
 
 ## 4. Module seam
 
@@ -110,33 +111,33 @@ One in-flight non-terminal job per `pairingId`. Further dispatches enqueue.
 
 Pairing (durable map, like webhooks/triggers):
 
-| Field | Notes |
-| --- | --- |
-| `id` | Opaque |
-| `agentName` | `sara` — QM name, lowercased |
-| `ownerPrincipalId` | Consenting QM person |
-| `grokDisplayName` | `QM · Sara` — find/create only |
-| `grokBotId` | Stable id after provision; never re-resolve by name |
-| `inboundRef` | Keychain credential id for webhook URL + bearer |
-| `skillRevision` | `qm-grok-bridge/v1` |
-| `consent` | `RecipientConsent` on the owner |
-| `status` | See §5 |
-| `originScopeId` | Scope where pairing was requested (audit) |
+| Field              | Notes                                               |
+| ------------------ | --------------------------------------------------- |
+| `id`               | Opaque                                              |
+| `agentName`        | `sara` — QM name, lowercased                        |
+| `ownerPrincipalId` | Consenting QM person                                |
+| `grokDisplayName`  | `QM · Sara` — find/create only                      |
+| `grokBotId`        | Stable id after provision; never re-resolve by name |
+| `inboundRef`       | Keychain credential id for webhook URL + bearer     |
+| `skillRevision`    | `qm-grok-bridge/v1`                                 |
+| `consent`          | `RecipientConsent` on the owner                     |
+| `status`           | See §5                                              |
+| `originScopeId`    | Scope where pairing was requested (audit)           |
 
 Unique: `(ownerPrincipalId, agentName)` while not `revoked`.
 
 Job:
 
-| Field | Notes |
-| --- | --- |
-| `id` | Also the idempotency key for outbound POST |
-| `pairingId` | |
-| `originSessionId` / `originActorId` | Room + asker |
-| `instruction` | Untrusted text; screened like a webhook payload |
-| `callbackTokenHash` | Store hash only |
-| `seqWatermark` | Last applied `seq` |
-| `status` | |
-| `expiresAt` | |
+| Field                               | Notes                                           |
+| ----------------------------------- | ----------------------------------------------- |
+| `id`                                | Also the idempotency key for outbound POST      |
+| `pairingId`                         |                                                 |
+| `originSessionId` / `originActorId` | Room + asker                                    |
+| `instruction`                       | Untrusted text; screened like a webhook payload |
+| `callbackTokenHash`                 | Store hash only                                 |
+| `seqWatermark`                      | Last applied `seq`                              |
+| `status`                            |                                                 |
+| `expiresAt`                         |                                                 |
 
 Events are not a second product record. Ingest applies them to the job and
 projects. Raw body kept only as a hash + truncated security-screen input
@@ -192,15 +193,15 @@ POST; never use any token except this job's.
 
 ## 8. HTTP surface (QM)
 
-| Method | Path | Auth |
-| --- | --- | --- |
-| POST | `/v1/grok-bridge/pairings` | session / capability |
-| POST | `/v1/grok-bridge/pairings/:id/decide` | owner |
-| POST | `/v1/grok-bridge/pairings/:id/inbound` | owner |
-| POST | `/v1/grok-bridge/pairings/:id/revoke` | owner |
-| POST | `/v1/grok-bridge/jobs` | session; membership on origin session |
-| GET | `/v1/grok-bridge/jobs/:id` | origin session member or owner |
-| POST | `/v1/grok-bridge/jobs/:id/events` | public + bearer (like `/v1/webhooks/incoming/:id`) |
+| Method | Path                                   | Auth                                               |
+| ------ | -------------------------------------- | -------------------------------------------------- |
+| POST   | `/v1/grok-bridge/pairings`             | session / capability                               |
+| POST   | `/v1/grok-bridge/pairings/:id/decide`  | owner                                              |
+| POST   | `/v1/grok-bridge/pairings/:id/inbound` | owner                                              |
+| POST   | `/v1/grok-bridge/pairings/:id/revoke`  | owner                                              |
+| POST   | `/v1/grok-bridge/jobs`                 | session; membership on origin session              |
+| GET    | `/v1/grok-bridge/jobs/:id`             | origin session member or owner                     |
+| POST   | `/v1/grok-bridge/jobs/:id/events`      | public + bearer (like `/v1/webhooks/incoming/:id`) |
 
 Flag off → 404 on all of these, same as other gated routes.
 
@@ -266,14 +267,14 @@ does not type subsequent jobs.
 
 ## 11. Failure and operations
 
-| Failure | Behavior |
-| --- | --- |
-| Grok webhook non-200 | Retry with existing delivery backoff; then `degraded` + job `failed` |
-| No event before TTL | `expired`; tell the room to check owner Grok Bot |
-| Seq gap | Hold; do not project; expire if still gapped |
-| Owner revokes mid-job | Fail job; 401 further events |
-| UI/skill missing | Pairing `degraded`; refuse dispatch; offer provisioner |
-| Owner laptop asleep | Irrelevant for webhook inbound; relevant only for CUA provision |
+| Failure               | Behavior                                                             |
+| --------------------- | -------------------------------------------------------------------- |
+| Grok webhook non-200  | Retry with existing delivery backoff; then `degraded` + job `failed` |
+| No event before TTL   | `expired`; tell the room to check owner Grok Bot                     |
+| Seq gap               | Hold; do not project; expire if still gapped                         |
+| Owner revokes mid-job | Fail job; 401 further events                                         |
+| UI/skill missing      | Pairing `degraded`; refuse dispatch; offer provisioner               |
+| Owner laptop asleep   | Irrelevant for webhook inbound; relevant only for CUA provision      |
 
 Metrics: `grok_bridge_jobs{status}`, dispatch latency, ingest 401 rate, queue
 depth per pairing, time-to-first-event, time-to-terminal. Logs carry
